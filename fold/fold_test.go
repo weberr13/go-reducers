@@ -38,7 +38,7 @@ func (f Foldable) Two(b monoid.CommutativeMonoid) monoid.CommutativeMonoid {
 }
 
 func TestExampleFoldSlice(t *testing.T) {
-	Convey("simple fold", t, func() {
+	Convey("simple set union fold", t, func() {
 		s := []monoid.CommutativeMonoid{
 			&Foldable{map[string]struct{}{"foo": struct{}{}}},
 			&Foldable{map[string]struct{}{"bar": struct{}{}}},
