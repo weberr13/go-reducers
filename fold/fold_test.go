@@ -3,14 +3,15 @@ package fold
 import (
 	"testing"
 
-	"github.com/weberr13/go-reducers/monoid"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/weberr13/go-reducers/monoid"
 )
 
 type Foldable struct {
 	mine map[string]struct{}
 }
-func (f Foldable) One() monoid.CommunativeMonoid {
+
+func (f Foldable) One() monoid.CommutativeMonoid {
 	n := make(map[string]struct{})
 	for k := range f.mine {
 		n[k] = struct{}{}
@@ -19,18 +20,18 @@ func (f Foldable) One() monoid.CommunativeMonoid {
 		mine: n,
 	}
 }
-func (f Foldable) Two(b monoid.CommunativeMonoid) monoid.CommunativeMonoid {
+func (f Foldable) Two(b monoid.CommutativeMonoid) monoid.CommutativeMonoid {
 	realB, ok := b.(*Foldable)
 	if !ok {
-		panic("Runtime error!  Dynamic cast failure for monoid.CommunativeMonoid -> Foldable")
+		panic("Runtime error!  Dynamic cast failure for monoid.CommutativeMonoid -> Foldable")
 	}
 	n := make(map[string]struct{})
 	for k := range f.mine {
 		n[k] = struct{}{}
-	}	
+	}
 	for k := range realB.mine {
 		n[k] = struct{}{}
-	}	
+	}
 	return &Foldable{
 		mine: n,
 	}
@@ -38,7 +39,7 @@ func (f Foldable) Two(b monoid.CommunativeMonoid) monoid.CommunativeMonoid {
 
 func TestExampleFoldSlice(t *testing.T) {
 	Convey("simple fold", t, func() {
-		s := []monoid.CommunativeMonoid{
+		s := []monoid.CommutativeMonoid{
 			&Foldable{map[string]struct{}{"foo": struct{}{}}},
 			&Foldable{map[string]struct{}{"bar": struct{}{}}},
 			&Foldable{map[string]struct{}{"baz": struct{}{}}},
@@ -53,6 +54,5 @@ func TestExampleFoldSlice(t *testing.T) {
 			"baz": struct{}{},
 		}})
 	})
-	
 
 }

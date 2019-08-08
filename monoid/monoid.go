@@ -1,6 +1,6 @@
 package monoid
 
-type CommunativeMonoid interface {
-	One() CommunativeMonoid
-	Two(a CommunativeMonoid) CommunativeMonoid
+type CommutativeMonoid interface {
+	One() CommutativeMonoid
+	Two(a CommutativeMonoid) CommutativeMonoid
 }
