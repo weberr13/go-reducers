@@ -2,6 +2,7 @@ package fold
 
 import (
 	"sync"
+
 	"github.com/weberr13/go-reducers/monoid"
 )
 
@@ -18,7 +19,6 @@ loop:
 		select {
 		case b = <-c:
 			c <- a.Two(b)
-			a = nil
 		case <- done:
 			c <- a.One()
 			break loop
@@ -27,7 +27,7 @@ loop:
 	// drain
 	for {
 		select {
-		case a = <-c: 
+		case a = <- c: 
 			select {
 			case b = <- c:
 				c <- a.Two(b)
@@ -58,5 +58,19 @@ func FoldSliceN(in []monoid.CommunativeMonoid, threads int) monoid.CommunativeMo
 	}
 	close(done)
 	wg.Wait()
-	return <- lazy
+	// The following feels hacky but there is a race where multiple folders could each get 1 element and all
+	// believe that they are the end of the lazy seq.  In that case we need a last merge. 
+	var c monoid.CommunativeMonoid
+	for {
+		select {
+		case cp := <-lazy:
+			if c == nil {
+				c = cp
+			} else {
+				c = cp.Two(c)
+			}
+		default:
+			return c
+		}
+	}
 }
