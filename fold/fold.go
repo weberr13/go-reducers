@@ -13,7 +13,11 @@ const (
 func folder(c chan monoid.CommutativeMonoid, done chan struct{}, wg *sync.WaitGroup) {
 	var a, b monoid.CommutativeMonoid
 
-	defer wg.Done()
+	defer func() {
+		if wg != nil {
+			wg.Done()
+		}
+	}()
 loop:
 	for a = range c {
 		select {
@@ -60,17 +64,6 @@ func FoldSliceN(in []monoid.CommutativeMonoid, threads int) monoid.CommutativeMo
 	wg.Wait()
 	// The following feels hacky but there is a race where multiple folders could each get 1 element and all
 	// believe that they are the end of the lazy seq.  In that case we need a last merge.
-	var c monoid.CommutativeMonoid
-	for {
-		select {
-		case cp := <-lazy:
-			if c == nil {
-				c = cp
-			} else {
-				c = cp.Two(c)
-			}
-		default:
-			return c
-		}
-	}
+	folder(lazy, done, nil)
+	return <- lazy
 }
