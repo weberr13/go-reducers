@@ -29,10 +29,11 @@ jobs:
           command: |
             go test -coverprofile=c.out ./...
             go tool cover -html=c.out -o coverage.html
-            mv coverage.html /tmp/artifacts
+            mkdir -p /tmp/artifacts
+            mv coverage.html /tmp/artifacts/
       - store_artifacts:
           path: /tmp/artifacts
       - codecov/upload:
-          file: {{ coverage_report_filepath }}
+          file: /tmp/artifacts/coverage.html
           token: "3deae823-5799-4137-8044-1a8448616ffe"
       
