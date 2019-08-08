@@ -33,6 +33,6 @@ jobs:
       - store_artifacts:
           path: /tmp/artifacts
       - codecov/upload:
-          file: /tmp/artifacts/coverage.html
+          file: {{ coverage_report_filepath }}
           token: "3deae823-5799-4137-8044-1a8448616ffe"
       
