@@ -56,3 +56,26 @@ func TestExampleFoldSlice(t *testing.T) {
 	})
 
 }
+
+func TestExampleFoldChan(t *testing.T) {
+	Convey("simple set union fold", t, func() {
+		s := make(chan monoid.CommutativeMonoid, 10)
+		go func () {
+			s <- &Foldable{map[string]struct{}{"foo": struct{}{}}}
+			s <- &Foldable{map[string]struct{}{"bar": struct{}{}}}
+			s <- &Foldable{map[string]struct{}{"baz": struct{}{}}}
+			s <- &Foldable{map[string]struct{}{"foo": struct{}{}}}
+			close(s)
+		}()
+
+		c := FoldChan(s)
+		cr, ok := c.(*Foldable)
+		So(ok, ShouldBeTrue)
+		So(cr, ShouldResemble, &Foldable{map[string]struct{}{
+			"foo": struct{}{},
+			"bar": struct{}{},
+			"baz": struct{}{},
+		}})
+	})
+
+}

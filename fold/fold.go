@@ -45,11 +45,43 @@ loop:
 	}
 }
 
+// FoldSlice of commutnative monoids (default threadpool)
 func FoldSlice(in []monoid.CommutativeMonoid) monoid.CommutativeMonoid {
 	return FoldSliceN(in, DefaultThreads)
 }
 
+// FoldSliceN wide of commutnative monoids 
 func FoldSliceN(in []monoid.CommutativeMonoid, threads int) monoid.CommutativeMonoid {
+	return FoldSourceN(func(lazy chan monoid.CommutativeMonoid) {
+		for i := range in {
+			lazy <- in[i]
+		}
+	}, threads)
+}
+
+// FoldChan elements till the channel is closed() (default threadpool)
+func FoldChan(in chan monoid.CommutativeMonoid) monoid.CommutativeMonoid {
+	return FoldChanN(in, DefaultThreads)
+}
+
+// FoldChanN elements till the channel is closed() N wide
+func FoldChanN(in chan monoid.CommutativeMonoid, threads int) monoid.CommutativeMonoid {
+	return FoldSourceN(func(lazy chan monoid.CommutativeMonoid) {
+		for c := range in {
+			lazy <- c
+		}
+	}, threads)
+}
+
+type SourceData func(chan monoid.CommutativeMonoid)
+
+// FoldSource data from a function that feeds a channel and exists (default threadpool)
+func FoldSource(f SourceData) monoid.CommutativeMonoid {
+	return FoldSourceN(f, DefaultThreads)
+}
+
+// FoldSourceN data from a funciton that feeds a channel and exits with given threadpool size
+func FoldSourceN(f SourceData, threads int) monoid.CommutativeMonoid {
 	lazy := make(chan monoid.CommutativeMonoid, threads)
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
@@ -57,13 +89,9 @@ func FoldSliceN(in []monoid.CommutativeMonoid, threads int) monoid.CommutativeMo
 		wg.Add(1)
 		go folder(lazy, done, wg)
 	}
-	for i := 0; i < len(in); i++ {
-		lazy <- in[i]
-	}
+	f(lazy)
 	close(done)
 	wg.Wait()
-	// The following feels hacky but there is a race where multiple folders could each get 1 element and all
-	// believe that they are the end of the lazy seq.  In that case we need a last merge.
 	folder(lazy, done, nil)
 	return <- lazy
 }
