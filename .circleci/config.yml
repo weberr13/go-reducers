@@ -31,9 +31,10 @@ jobs:
             go tool cover -html=c.out -o coverage.html
             mkdir -p /tmp/artifacts
             mv coverage.html /tmp/artifacts/
+            mv c.out /tmp/artifacts/
       - store_artifacts:
           path: /tmp/artifacts
       - codecov/upload:
-          file: /tmp/artifacts/coverage.html
+          file: /tmp/artifacts/c.out
           token: "3deae823-5799-4137-8044-1a8448616ffe"
       
