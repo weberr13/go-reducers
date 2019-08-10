@@ -7,3 +7,5 @@ type CommutativeMonoid interface {
 	// binary operator
 	Two(a CommutativeMonoid) CommutativeMonoid
 }
+
+type Identity func() CommutativeMonoid
