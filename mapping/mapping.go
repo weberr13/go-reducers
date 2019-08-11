@@ -31,6 +31,9 @@ func ForEachN(in Sequencer, out chan<- interface{}, f Transformer, threads int) 
 	if threads < 1 {
 		threads = 1
 	}
+	if threads > 1024 {
+		threads = 1024
+	}
 	wg := &sync.WaitGroup{}
 	c := make(chan Copyable, 1024)
 	go in(c)

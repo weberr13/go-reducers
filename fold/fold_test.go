@@ -308,5 +308,42 @@ func TestExampleFoldChan(t *testing.T) {
 			"baz": struct{}{},
 		}})
 	})
+	Convey("simple set union fold, lower boundary check", t, func() {
+		s := make(chan monoid.CommutativeMonoid, 10)
+		go func() {
+			s <- &StringSet{map[string]struct{}{"foo": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"bar": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"baz": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"foo": struct{}{}}}
+			close(s)
+		}()
 
+		c := FoldChanN(s, IdenityStringSet, -1)
+		cr, ok := c.(*StringSet)
+		So(ok, ShouldBeTrue)
+		So(cr, ShouldResemble, &StringSet{map[string]struct{}{
+			"foo": struct{}{},
+			"bar": struct{}{},
+			"baz": struct{}{},
+		}})
+	})
+	Convey("simple set union fold, upper boundary check", t, func() {
+		s := make(chan monoid.CommutativeMonoid, 10)
+		go func() {
+			s <- &StringSet{map[string]struct{}{"foo": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"bar": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"baz": struct{}{}}}
+			s <- &StringSet{map[string]struct{}{"foo": struct{}{}}}
+			close(s)
+		}()
+
+		c := FoldChanN(s, IdenityStringSet, 513)
+		cr, ok := c.(*StringSet)
+		So(ok, ShouldBeTrue)
+		So(cr, ShouldResemble, &StringSet{map[string]struct{}{
+			"foo": struct{}{},
+			"bar": struct{}{},
+			"baz": struct{}{},
+		}})
+	})
 }
