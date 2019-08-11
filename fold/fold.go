@@ -1,3 +1,4 @@
+// various functions that take sequences of things and combine them into one thing
 package fold
 
 import (
@@ -7,48 +8,61 @@ import (
 )
 
 const (
-	DefaultThreads = 128
+	DefaultThreads = 32
 )
 
-func folder(c chan monoid.CommutativeMonoid, done chan struct{}, i monoid.Identity, wg *sync.WaitGroup) {
-	var a, b monoid.CommutativeMonoid
+func drainToOne(in <-chan monoid.CommutativeMonoid, out chan<- monoid.CommutativeMonoid) {
+	for a := range in {
+		select {
+		case b := <- in:
+			out <- a.Two(b)
+		default:
+			out <- a
+			return 
+		}
+	}
+}
 
+func folder(c chan monoid.CommutativeMonoid, done <-chan struct{}, i monoid.Identity, wg *sync.WaitGroup) {
+	myWg := &sync.WaitGroup{}
+	loopback := make(chan monoid.CommutativeMonoid, 1024)
+	myWg.Add(1)
+	go func() {
+		defer myWg.Done()
+		for l := range loopback {
+			c <- l
+		}
+	}()
 	defer func() {
 		if wg != nil {
 			wg.Done()
 		}
 	}()
+	one := false
 loop:
 	for {
 		select {
 			case a := <- c: 
+				one = true
 				select {
-				case b = <-c:
-					c <- a.Two(b)
-				case <-done:
-					c <- a.One()
+				case b := <-c:
+					loopback <- a.Two(b)
+				case <- done:
+					loopback <- a
 					break loop
 				}
 			case <-done:
-				c <- i()
+				if !one {
+					loopback <- i()
+					return
+				}
 				break loop
 		}
 	}
-	// drain
-	for {
-		select {
-		case a = <-c:
-			select {
-			case b = <-c:
-				c <- a.Two(b)
-			default:
-				c <- a.One()
-				return
-			}
-		default:
-			return
-		}
-	}
+	drainToOne(c, loopback)
+	close(loopback)
+	myWg.Wait()
+	drainToOne(c,c)
 }
 
 // FoldSlice of commutnative monoids (default threadpool)
@@ -58,7 +72,7 @@ func FoldSlice(in []monoid.CommutativeMonoid, i monoid.Identity) monoid.Commutat
 
 // FoldSliceN wide of commutnative monoids 
 func FoldSliceN(in []monoid.CommutativeMonoid, i monoid.Identity, threads int) monoid.CommutativeMonoid {
-	return FoldSourceN(func(lazy chan monoid.CommutativeMonoid) {
+	return FoldSourceN(func(lazy chan<- monoid.CommutativeMonoid) {
 		for i := range in {
 			lazy <- in[i]
 		}
@@ -72,14 +86,14 @@ func FoldChan(in chan monoid.CommutativeMonoid, i monoid.Identity) monoid.Commut
 
 // FoldChanN elements till the channel is closed() N wide
 func FoldChanN(in chan monoid.CommutativeMonoid, i monoid.Identity, threads int) monoid.CommutativeMonoid {
-	return FoldSourceN(func(lazy chan monoid.CommutativeMonoid) {
+	return FoldSourceN(func(lazy chan<- monoid.CommutativeMonoid) {
 		for c := range in {
 			lazy <- c
 		}
 	}, i, threads)
 }
 
-type SourceData func(chan monoid.CommutativeMonoid)
+type SourceData func(chan<- monoid.CommutativeMonoid)
 
 // FoldSource data from a function that feeds a channel and exists (default threadpool)
 func FoldSource(f SourceData, i monoid.Identity) monoid.CommutativeMonoid {
@@ -88,7 +102,13 @@ func FoldSource(f SourceData, i monoid.Identity) monoid.CommutativeMonoid {
 
 // FoldSourceN data from a funciton that feeds a channel and exits with given threadpool size
 func FoldSourceN(f SourceData, i monoid.Identity, threads int) monoid.CommutativeMonoid {
-	lazy := make(chan monoid.CommutativeMonoid, threads)
+	if threads < 1 {
+		threads = 1
+	}
+	if threads > 512 {
+		threads = 512
+	}
+	lazy := make(chan monoid.CommutativeMonoid, 1024)
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	for j := 0; j < threads; j++ {
@@ -98,6 +118,6 @@ func FoldSourceN(f SourceData, i monoid.Identity, threads int) monoid.Commutativ
 	f(lazy)
 	close(done)
 	wg.Wait()
-	folder(lazy, done, i, nil)
+	drainToOne(lazy, lazy)
 	return <- lazy
 }

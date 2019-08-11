@@ -1,3 +1,4 @@
+// Contains various functions that apply a function across sequences of things
 package mapping
 
 import (
@@ -9,21 +10,38 @@ type Copyable interface {
 	Copy() Copyable
 }
 
-// Sequencers close the channel once they are finished
-type Sequencer func(chan Copyable)
+// Sequencer a channel of things and close the channel once they are finished
+type Sequencer func(chan<- Copyable)
 
+// Transformer from a Copyable to a new thing
 type Transformer func(Copyable) interface{}
 
-func ForEach(in Sequencer, out chan interface{}, f Transformer) {
+// DefaultThreads for distributing tasks
+const DefaultThreads = 128
+
+// ForEach thing in input apply f and put it in out but unlike Map order is not preserved
+// Closes out when complete
+func ForEach(in Sequencer, out chan<- interface{}, f Transformer) {
+	ForEachN(in, out, f, DefaultThreads)
+}
+
+// ForEachN thing in input apply f and put it in out but unlike Map order is not preserved
+// runs with a pool of N instead of the default, Closes out when complete
+func ForEachN(in Sequencer, out chan<- interface{}, f Transformer, threads int) {
+	if threads < 1 {
+		threads = 1
+	}
 	wg := &sync.WaitGroup{}
-	c := make(chan Copyable, 100)
+	c := make(chan Copyable, 1024)
 	go in(c)
-	for d := range c {
+	for i := 0 ; i < threads ; i++ {
 		wg.Add(1)
-		dc := d.Copy()
 		go func() {
 			defer wg.Done()
-			out <- f(dc)
+			for d := range c {
+				dc := d.Copy()
+				out <- f(dc)
+			}
 		}()
 	}
 	wg.Wait()
