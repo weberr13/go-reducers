@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"compress/gzip"
 	"os"
+	"path/filepath"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/weberr13/go-reducers/monoid"
@@ -105,7 +106,7 @@ func (f WordCount) Two(b monoid.CommutativeMonoid) monoid.CommutativeMonoid {
 }
 
 func WarAndPeaceCount(b *testing.B, forDepth int, foldDepth int, readlines int, linebundle int) {
-	filename := "WarAndPeace_LeoTolstoy.txt.gz"
+	filename := filepath.Join("testdata", "WarAndPeace_LeoTolstoy.txt.gz")
 	file, err := os.Open(filename)
 	if err != nil {
 		b.Fatal(err)
@@ -134,7 +135,7 @@ func WarAndPeaceCount(b *testing.B, forDepth int, foldDepth int, readlines int, 
 		}
 		count++
 	}
-	expectedFile := fmt.Sprintf("WarAndPeaceResults.%d.json", readlines)
+	expectedFile := filepath.Join("testdata", fmt.Sprintf("WarAndPeaceResults.%d.json", readlines))
 	refdata, _ := ioutil.ReadFile(expectedFile)
 	refmap := make(map[string]interface{})
 	err = json.Unmarshal(refdata, &refmap)
