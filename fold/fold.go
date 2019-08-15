@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultThreads = 32
+	DefaultConcurrentWorkers = 32
 )
 
 func drainToOne(in <-chan monoid.CommutativeMonoid, out chan<- monoid.CommutativeMonoid) {
@@ -67,51 +67,51 @@ loop:
 
 // FoldSlice of commutnative monoids (default threadpool)
 func FoldSlice(in []monoid.CommutativeMonoid, i monoid.Identity) monoid.CommutativeMonoid {
-	return FoldSliceN(in, i, DefaultThreads)
+	return FoldSliceN(in, i, DefaultConcurrentWorkers)
 }
 
 // FoldSliceN wide of commutnative monoids 
-func FoldSliceN(in []monoid.CommutativeMonoid, i monoid.Identity, threads int) monoid.CommutativeMonoid {
+func FoldSliceN(in []monoid.CommutativeMonoid, i monoid.Identity, numWorkers int) monoid.CommutativeMonoid {
 	return FoldSourceN(func(lazy chan<- monoid.CommutativeMonoid) {
 		for i := range in {
 			lazy <- in[i]
 		}
-	}, i, threads)
+	}, i, numWorkers)
 }
 
 // FoldChan elements till the channel is closed() (default threadpool)
 func FoldChan(in chan monoid.CommutativeMonoid, i monoid.Identity) monoid.CommutativeMonoid {
-	return FoldChanN(in, i, DefaultThreads)
+	return FoldChanN(in, i, DefaultConcurrentWorkers)
 }
 
 // FoldChanN elements till the channel is closed() N wide
-func FoldChanN(in chan monoid.CommutativeMonoid, i monoid.Identity, threads int) monoid.CommutativeMonoid {
+func FoldChanN(in chan monoid.CommutativeMonoid, i monoid.Identity, numWorkers int) monoid.CommutativeMonoid {
 	return FoldSourceN(func(lazy chan<- monoid.CommutativeMonoid) {
 		for c := range in {
 			lazy <- c
 		}
-	}, i, threads)
+	}, i, numWorkers)
 }
 
 type SourceData func(chan<- monoid.CommutativeMonoid)
 
 // FoldSource data from a function that feeds a channel and exists (default threadpool)
 func FoldSource(f SourceData, i monoid.Identity) monoid.CommutativeMonoid {
-	return FoldSourceN(f, i, DefaultThreads)
+	return FoldSourceN(f, i, DefaultConcurrentWorkers)
 }
 
 // FoldSourceN data from a funciton that feeds a channel and exits with given threadpool size
-func FoldSourceN(f SourceData, i monoid.Identity, threads int) monoid.CommutativeMonoid {
-	if threads < 1 {
-		threads = 1
+func FoldSourceN(f SourceData, i monoid.Identity, numWorkers int) monoid.CommutativeMonoid {
+	if numWorkers < 1 {
+		numWorkers = 1
 	}
-	if threads > 512 {
-		threads = 512
+	if numWorkers > 512 {
+		numWorkers = 512
 	}
 	lazy := make(chan monoid.CommutativeMonoid, 1024)
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
-	for j := 0; j < threads; j++ {
+	for j := 0; j < numWorkers; j++ {
 		wg.Add(1)
 		go folder(lazy, done, i, wg)
 	}
