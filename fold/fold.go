@@ -1,3 +1,7 @@
+// Copyright 2019 F5 Networks. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 // various functions that take sequences of things and combine them into one thing
 package fold
 
