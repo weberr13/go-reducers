@@ -6,21 +6,21 @@ package fold
 
 import (
 	"bufio"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"reflect"
-	"encoding/json"
-	"sync"
-	"strings"
-	"testing"
-	"regexp"
-	"compress/gzip"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"strings"
+	"sync"
+	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/weberr13/go-reducers/monoid"
 	"github.com/weberr13/go-reducers/mapping"
+	"github.com/weberr13/go-reducers/monoid"
 )
 
 type StringSet struct {
@@ -60,6 +60,7 @@ func (s CopyableString) Copy() mapping.Copyable {
 type WordCount struct {
 	mine map[CopyableString]int
 }
+
 func IdentityWordCount() monoid.CommutativeMonoid {
 	return &WordCount{
 		mine: make(map[CopyableString]int),
@@ -73,13 +74,13 @@ func NewWordCount(c mapping.Copyable) interface{} {
 	cs := c.(CopyableString)
 	s := string(cs)
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s]+`)
-    s = reg.ReplaceAllString(s, " ")
+	s = reg.ReplaceAllString(s, " ")
 	s = strings.ToLower(s)
 	sn := strings.Fields(s)
 
 	for _, v := range sn {
 		vc := CopyableString(v)
-		if _, ok := w.mine[vc] ; ok {
+		if _, ok := w.mine[vc]; ok {
 			w.mine[vc]++
 		} else {
 			w.mine[vc] = 1
@@ -98,7 +99,7 @@ func (f WordCount) Two(b monoid.CommutativeMonoid) monoid.CommutativeMonoid {
 		n[k] = v
 	}
 	for k, v := range realB.mine {
-		if _, ok := n[k] ; ok{
+		if _, ok := n[k]; ok {
 			n[k] = n[k] + v
 		} else {
 			n[k] = v
@@ -125,7 +126,7 @@ func WarAndPeaceCount(b *testing.B, forDepth int, foldDepth int, readlines int, 
 	scanner := bufio.NewScanner(gz)
 	input := []string{}
 	linecount := 1
-	loop:
+loop:
 	for scanner.Scan() {
 		if count > readlines {
 			break loop
@@ -157,7 +158,7 @@ func WarAndPeaceCount(b *testing.B, forDepth int, foldDepth int, readlines int, 
 			go func() {
 				defer wg.Done()
 				mapping.ForEachN(
-					func(c chan<- mapping.Copyable){
+					func(c chan<- mapping.Copyable) {
 						for _, line := range input {
 							c <- CopyableString(line)
 						}
@@ -200,19 +201,19 @@ func WarAndPeaceCount(b *testing.B, forDepth int, foldDepth int, readlines int, 
 }
 
 func BenchmarkWordCount(b *testing.B) {
-	fors := []int{1,16,24}
-	folds := []int{1,2,4,6,8}
-	bundleSize := []int{1,10,100}
+	fors := []int{1, 16, 24}
+	folds := []int{1, 2, 4, 6, 8}
+	bundleSize := []int{1, 10, 100}
 	for _, bs := range bundleSize {
 		for _, fl := range folds {
 			for _, fo := range fors {
-				b.Run(fmt.Sprintf("Fold %d deep Map %d deep with %d lines per Map",fl,fo,bs), func(b *testing.B) {
+				b.Run(fmt.Sprintf("Fold %d deep Map %d deep with %d lines per Map", fl, fo, bs), func(b *testing.B) {
 					WarAndPeaceCount(b, fo, fl, 10000, bs)
 				})
 			}
 		}
 	}
-	
+
 }
 
 func TestWordCount(t *testing.T) {
@@ -221,11 +222,11 @@ func TestWordCount(t *testing.T) {
 			"The The is a great band, yes is also a great one.",
 			"the person who wrote the other line has terrible taste",
 		}
-		
+
 		creator := func(c chan<- monoid.CommutativeMonoid) {
 			out := make(chan interface{}, 100)
 			mapping.ForEach(
-				func(c chan<- mapping.Copyable){
+				func(c chan<- mapping.Copyable) {
 					for _, v := range testData {
 						c <- v
 					}
@@ -246,22 +247,22 @@ func TestWordCount(t *testing.T) {
 		cr, ok := c.(*WordCount)
 		So(ok, ShouldBeTrue)
 		So(cr.mine, ShouldResemble, map[CopyableString]int{
-			"a":2, 
-			"also":1, 
-			"band":1, 
-			"great":2, 
-			"has":1, 
-			"is":2, 
-			"line":1, 
-			"one":1, 
-			"other":1, 
-			"person":1, 
-			"taste":1, 
-			"terrible":1, 
-			"the":4, 
-			"who":1, 
-			"wrote":1, 
-			"yes":1,
+			"a":        2,
+			"also":     1,
+			"band":     1,
+			"great":    2,
+			"has":      1,
+			"is":       2,
+			"line":     1,
+			"one":      1,
+			"other":    1,
+			"person":   1,
+			"taste":    1,
+			"terrible": 1,
+			"the":      4,
+			"who":      1,
+			"wrote":    1,
+			"yes":      1,
 		})
 	})
 }

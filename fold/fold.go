@@ -18,11 +18,11 @@ const (
 func drainToOne(in <-chan monoid.CommutativeMonoid, out chan<- monoid.CommutativeMonoid) {
 	for a := range in {
 		select {
-		case b := <- in:
+		case b := <-in:
 			out <- a.Two(b)
 		default:
 			out <- a
-			return 
+			return
 		}
 	}
 }
@@ -46,27 +46,27 @@ func folder(c chan monoid.CommutativeMonoid, done <-chan struct{}, i monoid.Iden
 loop:
 	for {
 		select {
-			case a := <- c: 
-				one = true
-				select {
-				case b := <-c:
-					loopback <- a.Two(b)
-				case <- done:
-					loopback <- a
-					break loop
-				}
+		case a := <-c:
+			one = true
+			select {
+			case b := <-c:
+				loopback <- a.Two(b)
 			case <-done:
-				if !one {
-					loopback <- i()
-					return
-				}
+				loopback <- a
 				break loop
+			}
+		case <-done:
+			if !one {
+				loopback <- i()
+				return
+			}
+			break loop
 		}
 	}
 	drainToOne(c, loopback)
 	close(loopback)
 	myWg.Wait()
-	drainToOne(c,c)
+	drainToOne(c, c)
 }
 
 // FoldSlice of commutnative monoids (default threadpool)
@@ -74,7 +74,7 @@ func FoldSlice(in []monoid.CommutativeMonoid, i monoid.Identity) monoid.Commutat
 	return FoldSliceN(in, i, DefaultConcurrentWorkers)
 }
 
-// FoldSliceN wide of commutnative monoids 
+// FoldSliceN wide of commutnative monoids
 func FoldSliceN(in []monoid.CommutativeMonoid, i monoid.Identity, numWorkers int) monoid.CommutativeMonoid {
 	return FoldSourceN(func(lazy chan<- monoid.CommutativeMonoid) {
 		for i := range in {
@@ -123,5 +123,5 @@ func FoldSourceN(f SourceData, i monoid.Identity, numWorkers int) monoid.Commuta
 	close(done)
 	wg.Wait()
 	drainToOne(lazy, lazy)
-	return <- lazy
+	return <-lazy
 }
