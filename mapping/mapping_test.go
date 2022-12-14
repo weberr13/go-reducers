@@ -5,9 +5,9 @@
 package mapping_test
 
 import (
-	"testing"
-	"sync"
 	"strings"
+	"sync"
+	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/weberr13/go-reducers/mapping"
@@ -26,7 +26,7 @@ func (c CopyableStringSlice) Copy() mapping.Copyable {
 }
 
 func TestForEach(t *testing.T) {
-	tests := map[string]struct{
+	tests := map[string]struct {
 		s []CopyableStringSlice
 		n int
 		f func(string) string
